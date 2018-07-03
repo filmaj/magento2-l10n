@@ -10,6 +10,7 @@ use Magento\Customer\Api\CustomerMetadataInterface;
 use Magento\Customer\Api\Data\CustomerInterfaceFactory;
 use Magento\Customer\Api\GroupRepositoryInterface;
 use Magento\Customer\Model\Config\Share;
+use Magento\Customer\Model\Name\FromCustomerNameDataProviderFactory;
 use Magento\Customer\Model\ResourceModel\Address\CollectionFactory;
 use Magento\Customer\Model\ResourceModel\Customer as ResourceCustomer;
 use Magento\Framework\App\Config\ScopeConfigInterface;
@@ -17,6 +18,7 @@ use Magento\Framework\Exception\AuthenticationException;
 use Magento\Framework\Exception\EmailNotConfirmedException;
 use Magento\Framework\Exception\InvalidEmailOrPasswordException;
 use Magento\Framework\Indexer\StateInterface;
+use Magento\Framework\PersonName\Formatter;
 use Magento\Framework\Reflection\DataObjectProcessor;
 use Magento\Store\Model\ScopeInterface;
 use Magento\Framework\App\ObjectManager;
@@ -220,6 +222,16 @@ class Customer extends \Magento\Framework\Model\AbstractModel
     private $accountConfirmation;
 
     /**
+     * @var FromCustomerNameDataProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
@@ -241,6 +253,8 @@ class Customer extends \Magento\Framework\Model\AbstractModel
      * @param \Magento\Framework\Data\Collection\AbstractDb|null $resourceCollection
      * @param array $data
      * @param AccountConfirmation|null $accountConfirmation
+     * @param FromCustomerNameDataProviderFactory $nameDataProviderFactory,
+     * @param Formatter $nameFormatter
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
@@ -265,7 +279,9 @@ class Customer extends \Magento\Framework\Model\AbstractModel
         \Magento\Framework\Indexer\IndexerRegistry $indexerRegistry,
         \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        AccountConfirmation $accountConfirmation = null
+        AccountConfirmation $accountConfirmation = null,
+        FromCustomerNameDataProviderFactory $nameDataProviderFactory = null,
+        Formatter $nameFormatter = null
     ) {
         $this->metadataService = $metadataService;
         $this->_scopeConfig = $scopeConfig;
@@ -291,6 +307,11 @@ class Customer extends \Magento\Framework\Model\AbstractModel
             $resourceCollection,
             $data
         );
+
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(FromCustomerNameDataProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -440,19 +461,13 @@ class Customer extends \Magento\Framework\Model\AbstractModel
      */
     public function getName()
     {
-        $name = '';
-
-        if ($this->_config->getAttribute('customer', 'prefix')->getIsVisible() && $this->getPrefix()) {
-            $name .= $this->getPrefix() . ' ';
-        }
-        $name .= $this->getFirstname();
-        if ($this->_config->getAttribute('customer', 'middlename')->getIsVisible() && $this->getMiddlename()) {
-            $name .= ' ' . $this->getMiddlename();
-        }
-        $name .= ' ' . $this->getLastname();
-        if ($this->_config->getAttribute('customer', 'suffix')->getIsVisible() && $this->getSuffix()) {
-            $name .= ' ' . $this->getSuffix();
-        }
+        $data = $this->customerDataFactory->create([
+            'data' => $this->toArray()
+        ]);
+        $name = $this->nameFormatter->format(
+            $this->nameDataProviderFactory->create($data),
+            Formatter::FORMAT_LONG
+        );
         return $name;
     }
 

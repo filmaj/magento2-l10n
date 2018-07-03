@@ -4,6 +4,9 @@
  * See COPYING.txt for license details.
  */
 namespace Magento\Customer\Model\ResourceModel\Customer;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\PersonName\SqlFormat;
+use Magento\Framework\PersonName\FormatInterface;
 
 /**
  * Customers collection
@@ -29,6 +32,13 @@ class Collection extends \Magento\Eav\Model\Entity\Collection\VersionControl\Abs
     protected $_modelName;
 
     /**
+     * SQL expression for full name formatting
+     *
+     * @var SqlFormat
+     */
+    private $nameSqlFormat;
+
+    /**
      * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
      * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
@@ -42,6 +52,7 @@ class Collection extends \Magento\Eav\Model\Entity\Collection\VersionControl\Abs
      * @param \Magento\Framework\DataObject\Copy\Config $fieldsetConfig
      * @param \Magento\Framework\DB\Adapter\AdapterInterface $connection
      * @param string $modelName
+     * @param SqlFormat $nameSqlFormat
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
@@ -58,7 +69,8 @@ class Collection extends \Magento\Eav\Model\Entity\Collection\VersionControl\Abs
         \Magento\Framework\Model\ResourceModel\Db\VersionControl\Snapshot $entitySnapshot,
         \Magento\Framework\DataObject\Copy\Config $fieldsetConfig,
         \Magento\Framework\DB\Adapter\AdapterInterface $connection = null,
-        $modelName = self::CUSTOMER_MODEL_NAME
+        $modelName = self::CUSTOMER_MODEL_NAME,
+        SqlFormat $nameSqlFormat = null
     ) {
         $this->_fieldsetConfig = $fieldsetConfig;
         $this->_modelName = $modelName;
@@ -75,6 +87,7 @@ class Collection extends \Magento\Eav\Model\Entity\Collection\VersionControl\Abs
             $entitySnapshot,
             $connection
         );
+        $this->nameSqlFormat = $nameSqlFormat ?: ObjectManager::getInstance()->get(SqlFormat::class);
     }
 
     /**
@@ -121,35 +134,23 @@ class Collection extends \Magento\Eav\Model\Entity\Collection\VersionControl\Abs
             }
         }
 
-        $connection = $this->getConnection();
-        $concatenate = [];
+        $mappedFields = [
+            FormatInterface::PART_FIRST_NAME => '{{firstname}}',
+            FormatInterface::PART_GIVEN_NAME => '{{firstname}}',
+            FormatInterface::PART_LAST_NAME => '{{lastname}}',
+            FormatInterface::PART_FAMILY_NAME => '{{lastname}}',
+        ];
         if (isset($fields['prefix'])) {
-            $concatenate[] = $connection->getCheckSql(
-                '{{prefix}} IS NOT NULL AND {{prefix}} != \'\'',
-                $connection->getConcatSql(['LTRIM(RTRIM({{prefix}}))', '\' \'']),
-                '\'\''
-            );
+            $mappedFields[FormatInterface::PART_NAME_PREFIX] = '{{prefix}}';
         }
-        $concatenate[] = 'LTRIM(RTRIM({{firstname}}))';
-        $concatenate[] = '\' \'';
         if (isset($fields['middlename'])) {
-            $concatenate[] = $connection->getCheckSql(
-                '{{middlename}} IS NOT NULL AND {{middlename}} != \'\'',
-                $connection->getConcatSql(['LTRIM(RTRIM({{middlename}}))', '\' \'']),
-                '\'\''
-            );
+            $mappedFields[FormatInterface::PART_MIDDLE_NAME] = '{{middleName}}';
         }
-        $concatenate[] = 'LTRIM(RTRIM({{lastname}}))';
         if (isset($fields['suffix'])) {
-            $concatenate[] = $connection->getCheckSql(
-                '{{suffix}} IS NOT NULL AND {{suffix}} != \'\'',
-                $connection->getConcatSql(['\' \'', 'LTRIM(RTRIM({{suffix}}))']),
-                '\'\''
-            );
+            $mappedFields[FormatInterface::PART_NAME_SUFFIX] = '{{suffix}}';
         }
 
-        $nameExpr = $connection->getConcatSql($concatenate);
-
+        $nameExpr = $this->getConnection()->getConcatSql($this->nameSqlFormat->getSqlParts($mappedFields));
         $this->addExpressionAttributeToSelect('name', $nameExpr, $fields);
 
         return $this;

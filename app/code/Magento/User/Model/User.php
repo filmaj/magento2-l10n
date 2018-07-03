@@ -513,7 +513,7 @@ class User extends AbstractModel implements StorageInterface, UserInterface
     /**
      * Retrieve user name
      *
-     * @param string $separator
+     * @param string $separator @deprecated
      * @return string
      */
     public function getName($separator = ' ')

@@ -8,6 +8,9 @@ namespace Magento\Customer\Helper;
 use Magento\Customer\Api\CustomerNameGenerationInterface;
 use Magento\Customer\Api\CustomerMetadataInterface;
 use Magento\Customer\Api\Data\CustomerInterface;
+use Magento\Customer\Model\Name\FromCustomerNameDataProviderFactory;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\PersonName\Formatter;
 
 /**
  * Customer helper for view.
@@ -15,22 +18,41 @@ use Magento\Customer\Api\Data\CustomerInterface;
 class View extends \Magento\Framework\App\Helper\AbstractHelper implements CustomerNameGenerationInterface
 {
     /**
+     * @deprecated
      * @var CustomerMetadataInterface
      */
     protected $_customerMetadataService;
+
+    /**
+     * @var FromCustomerNameDataProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
 
     /**
      * Initialize dependencies.
      *
      * @param \Magento\Framework\App\Helper\Context $context
      * @param CustomerMetadataInterface $customerMetadataService
+     * @param FromCustomerNameDataProviderFactory $nameDataProviderFactory,
+     * @param Formatter $nameFormatter
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
-        CustomerMetadataInterface $customerMetadataService
+        CustomerMetadataInterface $customerMetadataService,
+        FromCustomerNameDataProviderFactory $nameDataProviderFactory = null,
+        Formatter $nameFormatter = null
     ) {
         $this->_customerMetadataService = $customerMetadataService;
         parent::__construct($context);
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(FromCustomerNameDataProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -38,25 +60,10 @@ class View extends \Magento\Framework\App\Helper\AbstractHelper implements Custo
      */
     public function getCustomerName(CustomerInterface $customerData)
     {
-        $name = '';
-        $prefixMetadata = $this->_customerMetadataService->getAttributeMetadata('prefix');
-        if ($prefixMetadata->isVisible() && $customerData->getPrefix()) {
-            $name .= $customerData->getPrefix() . ' ';
-        }
-
-        $name .= $customerData->getFirstname();
-
-        $middleNameMetadata = $this->_customerMetadataService->getAttributeMetadata('middlename');
-        if ($middleNameMetadata->isVisible() && $customerData->getMiddlename()) {
-            $name .= ' ' . $customerData->getMiddlename();
-        }
-
-        $name .= ' ' . $customerData->getLastname();
-
-        $suffixMetadata = $this->_customerMetadataService->getAttributeMetadata('suffix');
-        if ($suffixMetadata->isVisible() && $customerData->getSuffix()) {
-            $name .= ' ' . $customerData->getSuffix();
-        }
+        $name = $this->nameFormatter->format(
+            $this->nameDataProviderFactory->create($customerData),
+            Formatter::FORMAT_LONG
+        );
         return $name;
     }
 }

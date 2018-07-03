@@ -204,6 +204,42 @@
     <preference for="Magento\Framework\MessageQueue\ExchangeFactoryInterface" type="Magento\Framework\MessageQueue\ExchangeFactory" />
     <preference for="Magento\Framework\MessageQueue\Bulk\ExchangeFactoryInterface" type="Magento\Framework\MessageQueue\Bulk\ExchangeFactory" />
     <preference for="Magento\Framework\MessageQueue\QueueFactoryInterface" type="Magento\Framework\MessageQueue\QueueFactory" />
+    <preference for="Magento\Framework\PersonName\FormatInterface" type="Magento\Framework\PersonName\DefaultFormat" />
+    <preference for="Magento\Framework\PersonName\RendererInterface" type="Magento\Framework\PersonName\DefaultNameRenderer" />
+    <virtualType name="Magento\Framework\PersonName\DefaultFormat" type="Magento\Framework\PersonName\LocalizedConfiguredFormat">
+        <arguments>
+            <argument name="configScope" xsi:type="const">Magento\Store\Model\ScopeInterface::SCOPE_STORE</argument>
+            <argument name="type" xsi:type="const">Magento\Framework\PersonName\LocalizedConfiguredFormat::TYPE_DEFAULT</argument>
+            <argument name="default" xsi:type="string">{firstName} {lastName}</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="Magento\Framework\PersonName\LongFormat" type="Magento\Framework\PersonName\LocalizedConfiguredFormat">
+        <arguments>
+            <argument name="configScope" xsi:type="const">Magento\Store\Model\ScopeInterface::SCOPE_STORE</argument>
+            <argument name="type" xsi:type="const">Magento\Framework\PersonName\LocalizedConfiguredFormat::TYPE_LONG</argument>
+            <argument name="default" xsi:type="string">{prefix} {firstName} {middleName} {lastName} {suffix}</argument>
+        </arguments>
+    </virtualType>
+    <!-- @api -->
+    <virtualType name="Magento\Framework\PersonName\DefaultNameRenderer" type="Magento\Framework\PersonName\FormattedRenderer">
+        <arguments>
+            <argument name="format" xsi:type="object">Magento\Framework\PersonName\DefaultFormat</argument>
+        </arguments>
+    </virtualType>
+    <!-- @api -->
+    <virtualType name="Magento\Framework\PersonName\LongNameRenderer" type="Magento\Framework\PersonName\FormattedRenderer">
+        <arguments>
+            <argument name="format" xsi:type="object">Magento\Framework\PersonName\LongFormat</argument>
+        </arguments>
+    </virtualType>
+    <type name="Magento\Framework\PersonName\Formatter">
+        <arguments>
+            <argument name="renderers" xsi:type="array">
+                <item name="default" xsi:type="object">Magento\Framework\PersonName\DefaultNameRenderer</item>
+                <item name="long" xsi:type="object">Magento\Framework\PersonName\LongNameRenderer</item>
+            </argument>
+        </arguments>
+    </type>
     <type name="Magento\Framework\Model\ResourceModel\Db\TransactionManager" shared="false" />
     <type name="Magento\Framework\Acl\Data\Cache">
         <arguments>

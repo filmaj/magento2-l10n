@@ -6,7 +6,10 @@
 
 namespace Magento\Reports\Model\ResourceModel\Order;
 
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\DB\Select;
+use Magento\Framework\PersonName\SqlFormat;
+use Magento\Framework\PersonName\FormatInterface;
 
 /**
  * Reports orders collection
@@ -68,6 +71,13 @@ class Collection extends \Magento\Sales\Model\ResourceModel\Order\Collection
     protected $_reportOrderFactory;
 
     /**
+     * SQL expression for full name formatting
+     *
+     * @var SqlFormat
+     */
+    private $nameSqlFormat;
+
+    /**
      * Constructor
      *
      * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
@@ -81,8 +91,9 @@ class Collection extends \Magento\Sales\Model\ResourceModel\Order\Collection
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Sales\Model\Order\Config $orderConfig
      * @param \Magento\Sales\Model\ResourceModel\Report\OrderFactory $reportOrderFactory
-     * @param null $connection
+     * @param \Magento\Framework\DB\Adapter\AdapterInterface $connection
      * @param \Magento\Framework\Model\ResourceModel\Db\AbstractDb $resource
+     * @param SqlFormat $nameSqlFormat
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
@@ -99,7 +110,8 @@ class Collection extends \Magento\Sales\Model\ResourceModel\Order\Collection
         \Magento\Sales\Model\Order\Config $orderConfig,
         \Magento\Sales\Model\ResourceModel\Report\OrderFactory $reportOrderFactory,
         \Magento\Framework\DB\Adapter\AdapterInterface $connection = null,
-        \Magento\Framework\Model\ResourceModel\Db\AbstractDb $resource = null
+        \Magento\Framework\Model\ResourceModel\Db\AbstractDb $resource = null,
+        SqlFormat $nameSqlFormat = null
     ) {
         parent::__construct(
             $entityFactory,
@@ -116,6 +128,7 @@ class Collection extends \Magento\Sales\Model\ResourceModel\Order\Collection
         $this->_localeDate = $localeDate;
         $this->_orderConfig = $orderConfig;
         $this->_reportOrderFactory = $reportOrderFactory;
+        $this->nameSqlFormat = $nameSqlFormat ?: ObjectManager::getInstance()->get(SqlFormat::class);
     }
 
     /**
@@ -743,8 +756,15 @@ class Collection extends \Magento\Sales\Model\ResourceModel\Order\Collection
      */
     public function joinCustomerName($alias = 'name')
     {
-        $fields = ['main_table.customer_firstname', 'main_table.customer_lastname'];
-        $fieldConcat = $this->getConnection()->getConcatSql($fields, ' ');
+        $mappedFields = [
+            FormatInterface::PART_FIRST_NAME => 'main_table.customer_firstname',
+            FormatInterface::PART_GIVEN_NAME => 'main_table.customer_firstname',
+            FormatInterface::PART_LAST_NAME => 'main_table.customer_lastname',
+            FormatInterface::PART_FAMILY_NAME => 'main_table.customer_lastname',
+        ];
+
+        $fieldConcat = $this->getConnection()->getConcatSql($this->nameSqlFormat->getSqlParts($mappedFields));
+
         $this->getSelect()->columns([$alias => $fieldConcat]);
         return $this;
     }

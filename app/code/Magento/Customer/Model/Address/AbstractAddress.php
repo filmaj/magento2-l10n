@@ -12,8 +12,10 @@ use Magento\Customer\Api\Data\AddressInterfaceFactory;
 use Magento\Customer\Api\Data\RegionInterface;
 use Magento\Customer\Api\Data\RegionInterfaceFactory;
 use Magento\Customer\Model\Data\Address as AddressData;
+use Magento\Customer\Model\Name\FromAddressNameDataProviderFactory;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Model\AbstractExtensibleModel;
+use Magento\Framework\PersonName\Formatter;
 
 /**
  * Address abstract model
@@ -123,6 +125,16 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
     private $compositeValidator;
 
     /**
+     * @var FromAddressNameDataProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
@@ -140,6 +152,8 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
      * @param array $data
      * @param CompositeValidator $compositeValidator
+     * @param FromAddressNameDataProviderFactory $nameDataProviderFactory,
+     * @param Formatter $nameFormatter
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
@@ -160,7 +174,9 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
         \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        CompositeValidator $compositeValidator = null
+        CompositeValidator $compositeValidator = null,
+        $nameDataProviderFactory = null,
+        $nameFormatter = null
     ) {
         $this->_directoryData = $directoryData;
         $data = $this->_implodeArrayField($data);
@@ -183,6 +199,11 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
             $resourceCollection,
             $data
         );
+
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(FromAddressNameDataProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -192,19 +213,13 @@ class AbstractAddress extends AbstractExtensibleModel implements AddressModelInt
      */
     public function getName()
     {
-        $name = '';
-        if ($this->_eavConfig->getAttribute('customer_address', 'prefix')->getIsVisible() && $this->getPrefix()) {
-            $name .= $this->getPrefix() . ' ';
-        }
-        $name .= $this->getFirstname();
-        $middleName = $this->_eavConfig->getAttribute('customer_address', 'middlename');
-        if ($middleName->getIsVisible() && $this->getMiddlename()) {
-            $name .= ' ' . $this->getMiddlename();
-        }
-        $name .= ' ' . $this->getLastname();
-        if ($this->_eavConfig->getAttribute('customer_address', 'suffix')->getIsVisible() && $this->getSuffix()) {
-            $name .= ' ' . $this->getSuffix();
-        }
+        $data = $this->addressDataFactory->create([
+            'data' => $this->toArray()
+        ]);
+        $name = $this->nameFormatter->format(
+            $this->nameDataProviderFactory->create($data),
+            Formatter::FORMAT_LONG
+        );
         return $name;
     }
 
