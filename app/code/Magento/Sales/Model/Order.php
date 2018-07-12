@@ -9,6 +9,8 @@ use Magento\Directory\Model\Currency;
 use Magento\Framework\Api\AttributeValueFactory;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Locale\ResolverInterface;
+use Magento\Framework\PersonName\ArrayProviderFactory;
+use Magento\Framework\PersonName\Formatter;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Sales\Api\Data\OrderInterface;
 use Magento\Sales\Api\Data\OrderStatusHistoryInterface;
@@ -280,6 +282,16 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
     private $localeResolver;
 
     /**
+     * @var ArrayProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
@@ -308,6 +320,8 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
      * @param array $data
      * @param ResolverInterface $localeResolver
+     * @param ArrayProviderFactory $nameDataProviderFactory
+     * @param Formatter $nameFormatter
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
@@ -338,7 +352,9 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
         \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        ResolverInterface $localeResolver = null
+        ResolverInterface $localeResolver = null,
+        ArrayProviderFactory $nameDataProviderFactory = null,
+        Formatter $nameFormatter = null
     ) {
         $this->_storeManager = $storeManager;
         $this->_orderConfig = $orderConfig;
@@ -371,6 +387,11 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
             $resourceCollection,
             $data
         );
+
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(ArrayProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -1814,12 +1835,25 @@ class Order extends AbstractModel implements EntityInterface, OrderInterface
      */
     public function getCustomerName()
     {
-        if ($this->getCustomerFirstname()) {
-            $customerName = $this->getCustomerFirstname() . ' ' . $this->getCustomerLastname();
-        } else {
-            $customerName = (string)__('Guest');
+        $customerDataPrefix = 'customer_';
+        $customerDataPrefixLength = strlen($customerDataPrefix);
+        $customerData = [];
+        foreach ($this->getData() as $key => $data) {
+            if (0 === strpos($key, $customerDataPrefix)) {
+                $customerData[substr($key, $customerDataPrefixLength)] = $data;
+            }
         }
-        return $customerName;
+        $name = $this->nameFormatter->format(
+            $this->nameDataProviderFactory->create([
+                'data' => $customerData
+            ]),
+            Formatter::FORMAT_DEFAULT
+        );
+
+        if (!empty($name)) {
+            return $name;
+        }
+        return (string)__('Guest');
     }
 
     /**

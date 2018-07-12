@@ -43,6 +43,7 @@ class CardBuilder
         $payment = $order->getPayment();
         $result = [
             'card' => [
+                // card holder name should not be formatted according to common name format
                 'cardHolderName' => $address->getFirstname() . ' ' . $address->getLastname(),
                 'last4' => $payment->getCcLast4(),
                 'expiryMonth' => $payment->getCcExpMonth(),

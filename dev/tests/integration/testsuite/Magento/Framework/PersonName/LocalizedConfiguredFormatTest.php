@@ -35,7 +35,7 @@ class LocalizedConfiguredFormatTest extends TestCase
     }
 
     /**
-     * @magentoConfigFixture default/general/person_name_format/default/global {lastName}, {firstName}
+     * @magentoConfigFixture default/general/person_name_format/default/global {{var lastname}}, {{var firstname}}
      */
     public function testConfiguredGlobalFormat()
     {
@@ -48,7 +48,7 @@ class LocalizedConfiguredFormatTest extends TestCase
     }
 
     /**
-     * @magentoConfigFixture default/general/person_name_format/default/en_US {lastName}, {firstName}
+     * @magentoConfigFixture default/general/person_name_format/default/en_US {{var lastname}}, {{var firstname}}
      * @magentoConfigFixture default/general/locale/code "en_US"
      */
     public function testConfiguredLocalizedFormat()
@@ -62,8 +62,8 @@ class LocalizedConfiguredFormatTest extends TestCase
     }
 
     /**
-     * @magentoConfigFixture default/general/person_name_format/default/global {lastName}, {firstName}
-     * @magentoConfigFixture default/general/person_name_format/default/en_US {lastName} {firstName}
+     * @magentoConfigFixture default/general/person_name_format/default/global {{var lastname}}, {{var firstname}}
+     * @magentoConfigFixture default/general/person_name_format/default/en_US {{var lastname}} {{var firstname}}
      * @magentoConfigFixture default/general/locale/code "en_US"
      */
     public function testConfiguredGlobalAndLocalizedFormat()
@@ -90,24 +90,15 @@ class LocalizedConfiguredFormatTest extends TestCase
 
     private function prepareIntegratedDataProvider(): DataProviderInterface
     {
-        $dataObjectWithPersonName = new DataObject([
+        $personNameData = [
             'firstname' => 'John',
             'lastname' => 'Doe',
             'middlename' => 'P.',
             'prefix'=> 'Mr.',
             'suffix' => 'Jr.',
-        ]);
+        ];
 
-        $dataProvider = new AliasedDataProvider(
-            new ArrayProvider($dataObjectWithPersonName),
-            [
-                'firstName' => 'firstname',
-                'givenName' => 'firstname',
-                'lastName' => 'lastname',
-                'familyName' => 'lastname',
-                'middleName' => 'middlename',
-            ]
-        );
+        $dataProvider = new ArrayProvider($personNameData);
 
         return $dataProvider;
     }

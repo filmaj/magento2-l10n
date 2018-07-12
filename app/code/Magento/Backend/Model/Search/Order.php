@@ -4,6 +4,9 @@
  * See COPYING.txt for license details.
  */
 namespace Magento\Backend\Model\Search;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\PersonName\DataObjectFormatter;
+use Magento\Framework\PersonName\Formatter;
 
 /**
  * Search Order Model
@@ -27,15 +30,23 @@ class Order extends \Magento\Framework\DataObject
     protected $_collectionFactory;
 
     /**
+     * @var DataObjectFormatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $collectionFactory
      * @param \Magento\Backend\Helper\Data $adminhtmlData
+     * @param DataObjectFormatter $nameFormatter
      */
     public function __construct(
         \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $collectionFactory,
-        \Magento\Backend\Helper\Data $adminhtmlData
+        \Magento\Backend\Helper\Data $adminhtmlData,
+        DataObjectFormatter $nameFormatter = null
     ) {
         $this->_collectionFactory = $collectionFactory;
         $this->_adminhtmlData = $adminhtmlData;
+        $this->nameFormatter = $nameFormatter ?: ObjectManager::getInstance()->get(DataObjectFormatter::class);
     }
 
     /**
@@ -78,7 +89,7 @@ class Order extends \Magento\Framework\DataObject
                 'id' => 'order/1/' . $order->getId(),
                 'type' => __('Order'),
                 'name' => __('Order #%1', $order->getIncrementId()),
-                'description' => $order->getFirstname() . ' ' . $order->getLastname(),
+                'description' => $this->nameFormatter->format($order, Formatter::FORMAT_DEFAULT),
                 'url' => $this->_adminhtmlData->getUrl('sales/order/view', ['order_id' => $order->getId()]),
             ];
         }

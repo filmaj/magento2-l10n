@@ -6,6 +6,9 @@
 namespace Magento\Sales\Model\Order;
 
 use Magento\Customer\Model\Address\AddressModelInterface;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\PersonName\DataObjectFormatter;
+use Magento\Framework\PersonName\Formatter;
 use Magento\Sales\Api\Data\OrderAddressInterface;
 use Magento\Sales\Model\AbstractModel;
 
@@ -54,6 +57,11 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
     protected $regionFactory;
 
     /**
+     * @var DataObjectFormatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
@@ -63,6 +71,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
      * @param \Magento\Framework\Model\ResourceModel\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
      * @param array $data
+     * @param DataObjectFormatter $nameFormatter
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
@@ -73,7 +82,8 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
         \Magento\Directory\Model\RegionFactory $regionFactory,
         \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
-        array $data = []
+        array $data = [],
+        DataObjectFormatter $nameFormatter = null
     ) {
         $data = $this->implodeStreetField($data);
         $this->regionFactory = $regionFactory;
@@ -87,6 +97,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
             $resourceCollection,
             $data
         );
+        $this->nameFormatter = $nameFormatter ?: ObjectManager::getInstance()->get(DataObjectFormatter::class);
     }
 
     /**
@@ -140,18 +151,7 @@ class Address extends AbstractModel implements OrderAddressInterface, AddressMod
      */
     public function getName()
     {
-        $name = '';
-        if ($this->getPrefix()) {
-            $name .= $this->getPrefix() . ' ';
-        }
-        $name .= $this->getFirstname();
-        if ($this->getMiddlename()) {
-            $name .= ' ' . $this->getMiddlename();
-        }
-        $name .= ' ' . $this->getLastname();
-        if ($this->getSuffix()) {
-            $name .= ' ' . $this->getSuffix();
-        }
+        $name = $this->nameFormatter->format($this, Formatter::FORMAT_LONG);
         return $name;
     }
 

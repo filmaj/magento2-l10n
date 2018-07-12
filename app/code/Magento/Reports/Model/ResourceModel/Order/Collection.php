@@ -757,9 +757,7 @@ class Collection extends \Magento\Sales\Model\ResourceModel\Order\Collection
     public function joinCustomerName($alias = 'name')
     {
         $mappedFields = [
-            FormatInterface::PART_FIRST_NAME => 'main_table.customer_firstname',
             FormatInterface::PART_GIVEN_NAME => 'main_table.customer_firstname',
-            FormatInterface::PART_LAST_NAME => 'main_table.customer_lastname',
             FormatInterface::PART_FAMILY_NAME => 'main_table.customer_lastname',
         ];
 

@@ -59,7 +59,7 @@
                 <redirect_dashboard>0</redirect_dashboard>
             </startup>
             <address_templates>
-                <text>{{depend prefix}}{{var prefix}} {{/depend}}{{var firstname}} {{depend middlename}}{{var middlename}} {{/depend}}{{var lastname}}{{depend suffix}} {{var suffix}}{{/depend}}
+                <text>{{template config_path="fullname/long"}}
 {{depend company}}{{var company}}{{/depend}}
 {{if street1}}{{var street1}}
 {{/if}}
@@ -71,8 +71,8 @@
 {{depend telephone}}T: {{var telephone}}{{/depend}}
 {{depend fax}}F: {{var fax}}{{/depend}}
 {{depend vat_id}}VAT: {{var vat_id}}{{/depend}}</text>
-                <oneline>{{depend prefix}}{{var prefix}} {{/depend}}{{var firstname}} {{depend middlename}}{{var middlename}} {{/depend}}{{var lastname}}{{depend suffix}} {{var suffix}}{{/depend}}, {{var street}}, {{var city}}, {{var region}} {{var postcode}}, {{var country}}</oneline>
-                <html><![CDATA[{{depend prefix}}{{var prefix}} {{/depend}}{{var firstname}} {{depend middlename}}{{var middlename}} {{/depend}}{{var lastname}}{{depend suffix}} {{var suffix}}{{/depend}}{{depend firstname}}<br />{{/depend}}
+                <oneline>{{template config_path="fullname/long"}}, {{var street}}, {{var city}}, {{var region}} {{var postcode}}, {{var country}}</oneline>
+                <html><![CDATA[{{template config_path="fullname/long"}}{{depend firstname}}<br />{{/depend}}
 {{depend company}}{{var company}}<br />{{/depend}}
 {{if street1}}{{var street1}}<br />{{/if}}
 {{depend street2}}{{var street2}}<br />{{/depend}}
@@ -83,7 +83,7 @@
 {{depend telephone}}T: <a href="tel:{{var telephone}}">{{var telephone}}</a>{{/depend}}
 {{depend fax}}<br />F: {{var fax}}{{/depend}}
 {{depend vat_id}}<br />VAT: {{var vat_id}}{{/depend}}]]></html>
-                <pdf><![CDATA[{{depend prefix}}{{var prefix}} {{/depend}}{{var firstname}} {{depend middlename}}{{var middlename}} {{/depend}}{{var lastname}}{{depend suffix}} {{var suffix}}{{/depend}}|
+                <pdf><![CDATA[{{template config_path="fullname/long"}}|
 {{depend company}}{{var company}}|{{/depend}}
 {{if street1}}{{var street1}}|{{/if}}
 {{depend street2}}{{var street2}}|{{/depend}}

@@ -9,6 +9,10 @@
  */
 namespace Magento\Review\Block\Adminhtml\Edit;
 
+use Magento\Customer\Model\Name\FromCustomerNameDataProviderFactory;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\PersonName\Formatter;
+
 class Form extends \Magento\Backend\Block\Widget\Form\Generic
 {
     /**
@@ -38,6 +42,16 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
     protected $_systemStore;
 
     /**
+     * @var FromCustomerNameDataProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Backend\Block\Template\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\Data\FormFactory $formFactory
@@ -46,6 +60,8 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
      * @param \Magento\Catalog\Model\ProductFactory $productFactory
      * @param \Magento\Review\Helper\Data $reviewData
      * @param array $data
+     * @param FromCustomerNameDataProviderFactory $nameDataProviderFactory
+     * @param Formatter $nameFormatter
      */
     public function __construct(
         \Magento\Backend\Block\Template\Context $context,
@@ -55,13 +71,20 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
         \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository,
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Review\Helper\Data $reviewData,
-        array $data = []
+        array $data = [],
+        FromCustomerNameDataProviderFactory $nameDataProviderFactory = null,
+        Formatter $nameFormatter = null
     ) {
         $this->_reviewData = $reviewData;
         $this->customerRepository = $customerRepository;
         $this->_productFactory = $productFactory;
         $this->_systemStore = $systemStore;
         parent::__construct($context, $registry, $formFactory, $data);
+
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(FromCustomerNameDataProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -114,10 +137,14 @@ class Form extends \Magento\Backend\Block\Widget\Form\Generic
         try {
             $customer = $this->customerRepository->getById($review->getCustomerId());
             $customerText = __(
-                '<a href="%1" onclick="this.target=\'blank\'">%2 %3</a> <a href="mailto:%4">(%4)</a>',
+                '<a href="%1" onclick="this.target=\'blank\'">%2</a> <a href="mailto:%3">(%3)</a>',
                 $this->getUrl('customer/index/edit', ['id' => $customer->getId(), 'active_tab' => 'review']),
-                $this->escapeHtml($customer->getFirstname()),
-                $this->escapeHtml($customer->getLastname()),
+                $this->escapeHtml(
+                    $this->nameFormatter->format(
+                        $this->nameDataProviderFactory->create($customer),
+                        Formatter::FORMAT_DEFAULT
+                    )
+                ),
                 $this->escapeHtml($customer->getEmail())
             );
         } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {

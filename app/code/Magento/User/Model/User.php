@@ -11,6 +11,8 @@ use Magento\Backend\Model\Auth\Credential\StorageInterface;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Model\AbstractModel;
 use Magento\Framework\Exception\AuthenticationException;
+use Magento\Framework\PersonName\DataObjectFormatter;
+use Magento\Framework\PersonName\Formatter;
 use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Store\Model\Store;
 use Magento\User\Api\Data\UserInterface;
@@ -125,6 +127,11 @@ class User extends AbstractModel implements StorageInterface, UserInterface
     private $serializer;
 
     /**
+     * @var DataObjectFormatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\User\Helper\Data $userData
@@ -139,6 +146,7 @@ class User extends AbstractModel implements StorageInterface, UserInterface
      * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
      * @param array $data
      * @param Json $serializer
+     * @param DataObjectFormatter $nameFormatter
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
@@ -155,7 +163,8 @@ class User extends AbstractModel implements StorageInterface, UserInterface
         \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        Json $serializer = null
+        Json $serializer = null,
+        DataObjectFormatter $nameFormatter = null
     ) {
         $this->_encryptor = $encryptor;
         parent::__construct($context, $registry, $resource, $resourceCollection, $data);
@@ -167,6 +176,7 @@ class User extends AbstractModel implements StorageInterface, UserInterface
         $this->_storeManager = $storeManager;
         $this->validationRules = $validationRules;
         $this->serializer = $serializer ?: ObjectManager::getInstance()->get(Json::class);
+        $this->nameFormatter = $nameFormatter ?: ObjectManager::getInstance()->get(DataObjectFormatter::class);
     }
 
     /**
@@ -518,7 +528,18 @@ class User extends AbstractModel implements StorageInterface, UserInterface
      */
     public function getName($separator = ' ')
     {
-        return $this->getFirstName() . $separator . $this->getLastName();
+        $name = $this->nameFormatter->format($this, Formatter::FORMAT_DEFAULT);
+        if ($separator === ' ') {
+            return $name;
+        }
+
+        // for backward compatible output
+        $oldHardcodedFormat = $this->getFirstName() . ' ' . $this->getLastName();
+        if ($name === $oldHardcodedFormat) {
+            $name = $this->getFirstName() . $separator . $this->getLastName();
+        }
+
+        return $name;
     }
 
     /**

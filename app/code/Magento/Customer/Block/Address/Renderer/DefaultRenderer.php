@@ -8,6 +8,9 @@ namespace Magento\Customer\Block\Address\Renderer;
 use Magento\Customer\Model\Address\AddressModelInterface;
 use Magento\Customer\Model\Address\Mapper;
 use Magento\Customer\Model\Metadata\ElementFactory;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\PersonName\ArrayProviderFactory;
+use Magento\Framework\PersonName\Formatter;
 use Magento\Framework\View\Element\AbstractBlock;
 
 /**
@@ -43,6 +46,16 @@ class DefaultRenderer extends AbstractBlock implements RendererInterface
     protected $addressMapper;
 
     /**
+     * @var ArrayProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
+
+    /**
      * Constructor
      *
      * @param \Magento\Framework\View\Element\Context $context
@@ -51,6 +64,8 @@ class DefaultRenderer extends AbstractBlock implements RendererInterface
      * @param \Magento\Customer\Api\AddressMetadataInterface $metadataService
      * @param Mapper $addressMapper
      * @param array $data
+     * @param ArrayProviderFactory $nameDataProviderFactory
+     * @param Formatter $nameFormatter
      */
     public function __construct(
         \Magento\Framework\View\Element\Context $context,
@@ -58,7 +73,9 @@ class DefaultRenderer extends AbstractBlock implements RendererInterface
         \Magento\Directory\Model\CountryFactory $countryFactory,
         \Magento\Customer\Api\AddressMetadataInterface $metadataService,
         Mapper $addressMapper,
-        array $data = []
+        array $data = [],
+        ArrayProviderFactory $nameDataProviderFactory = null,
+        Formatter $nameFormatter = null
     ) {
         $this->_elementFactory = $elementFactory;
         $this->_countryFactory = $countryFactory;
@@ -66,6 +83,10 @@ class DefaultRenderer extends AbstractBlock implements RendererInterface
         $this->addressMapper = $addressMapper;
         parent::__construct($context, $data);
         $this->_isScopePrivate = true;
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(ArrayProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -170,7 +191,11 @@ class DefaultRenderer extends AbstractBlock implements RendererInterface
                 $data['region'] = __($addressAttributes['region']);
             } elseif (isset($addressAttributes[$attributeCode])) {
                 $value = $addressAttributes[$attributeCode];
-                $dataModel = $this->_elementFactory->create($attributeMetadata, $value, 'customer_address');
+                $dataModel = $this->_elementFactory->create(
+                    $attributeMetadata,
+                    $value,
+                    'customer_address'
+                );
                 $value = $dataModel->outputValue($dataFormat);
                 if ($attributeMetadata->getFrontendInput() == 'multiline') {
                     $values = $dataModel->outputValue(ElementFactory::OUTPUT_FORMAT_ARRAY);
@@ -189,6 +214,31 @@ class DefaultRenderer extends AbstractBlock implements RendererInterface
             }
         }
         $format = $format !== null ? $format : $this->getFormatArray($addressAttributes);
-        return $this->filterManager->template($format, ['variables' => $data]);
+
+        $templateFilter = $this->filterManager->get('template', ['variables' => $data]);
+        $templateFilter->setTemplateProcessor(function (...$args) {
+            return $this->fullNameTemplateProcessor(...$args);
+        });
+        $formatted = $templateFilter->filter($format);
+        return $formatted;
+    }
+
+    private function fullNameTemplateProcessor($configPath, array $vars)
+    {
+        $config = explode('/', $configPath, 2);
+        if ($config[0] !== self::FULL_NAME_PLACEHOLDER) {
+            return '{Error in template processing}';
+        }
+
+        $fullNameFormat = isset($config[1]) ? $config[1] : Formatter::FORMAT_DEFAULT;
+
+        $fullName = $this->nameFormatter->format(
+            $this->nameDataProviderFactory->create([
+                'data' => $vars
+            ]),
+            $fullNameFormat
+        );
+
+        return $fullName;
     }
 }

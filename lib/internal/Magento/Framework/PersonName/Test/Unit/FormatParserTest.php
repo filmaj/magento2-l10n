@@ -30,32 +30,9 @@ class FormatParserTest extends TestCase
         );
     }
 
-    /**
-     * @expectedException Magento\Framework\Exception\LocalizedException
-     * @expectedExceptionMessage Unknown name format modifier "?".
-     */
-    public function testUnknownModifier()
-    {
-        $format = new StaticFormat('{familyName|?}');
-        $parser = new FormatParser();
-        $parser->parse($format);
-    }
-
     public function variations(): array
     {
         return [
-            [
-                '{givenName}',
-                [
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'givenName',
-                        ],
-                        'dependsOn' => 'givenName'
-                    ]
-                ]
-            ],
             [
                 'anonymous',
                 [
@@ -68,7 +45,30 @@ class FormatParserTest extends TestCase
                 ]
             ],
             [
-                '{firstName} {lastName}',
+                '{{var givenName}}',
+                [
+                    [
+                        'content' => [
+                            'type' => 'dynamic',
+                            'value' => 'givenName',
+                        ]
+                    ]
+                ],
+            ],
+            [
+                '{{depend givenName}}{{var givenName}}{{/depend}}',
+                [
+                    [
+                        'content' => [
+                            'type' => 'dynamic',
+                            'value' => 'givenName',
+                        ],
+                        'dependsOn' => 'givenName'
+                    ]
+                ]
+            ],
+            [
+                '{{depend firstName}}{{var firstName}} {{/depend}}{{var lastName}}',
                 [
                     [
                         'content' => [
@@ -88,27 +88,25 @@ class FormatParserTest extends TestCase
                         'content' => [
                             'type' => 'dynamic',
                             'value' => 'lastName',
-                        ],
-                        'dependsOn' => 'lastName'
+                        ]
                     ],
                 ]
             ],
             [
-                '{lastName}, {firstName}',
+                '{{var lastName}}{{depend firstName}}, {{var firstName}}{{/depend}}',
                 [
                     [
                         'content' => [
                             'type' => 'dynamic',
                             'value' => 'lastName',
-                        ],
-                        'dependsOn' => 'lastName'
+                        ]
                     ],
                     [
                         'content' => [
                             'type' => 'static',
                             'value' => ', ',
                         ],
-                        'dependsOn' => 'lastName'
+                        'dependsOn' => 'firstName'
                     ],
                     [
                         'content' => [
@@ -120,166 +118,71 @@ class FormatParserTest extends TestCase
                 ]
             ],
             [
-                'delimiterBefore{firstName}delimiterMiddle{lastName}delimiterAfter',
-                [
-                    [
-                        'content' => [
-                            'type' => 'static',
-                            'value' => 'delimiterBefore',
-                        ]
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'firstName',
-                        ],
-                        'dependsOn' => 'firstName'
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'static',
-                            'value' => 'delimiterMiddle',
-                        ],
-                        'dependsOn' => 'firstName'
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'lastName',
-                        ],
-                        'dependsOn' => 'lastName'
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'static',
-                            'value' => 'delimiterAfter',
-                        ],
-                        'dependsOn' => 'lastName'
-                    ],
-                ]
-            ],
-            [
-                'delimiterBefore{firstName|b}delimiterMiddle{lastName|r}delimiterAfter',
-                [
-                    [
-                        'content' => [
-                            'type' => 'static',
-                            'value' => 'delimiterBefore',
-                        ],
-                        'dependsOn' => 'firstName' // bound to following part name
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'firstName',
-                        ],
-                        'dependsOn' => 'firstName'
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'static',
-                            'value' => 'delimiterMiddle',
-                        ],
-                        'dependsOn' => 'firstName'
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'lastName',
-                        ]
-                        // field is required
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'static',
-                            'value' => 'delimiterAfter',
-                        ],
-                        // preceding field is required
-                    ],
-                ]
-            ],
-            [
-                '{firstName|r}{lastName}',
+                '{{depend prefix}}{{var prefix}} {{/depend}}{{var firstname}} ' .
+                '{{depend middlename}}{{var middlename}} {{/depend}}{{var lastname}}' .
+                '{{depend suffix}} {{var suffix}}{{/depend}}',
                 [
                     [
                         'content' => [
                             'type' => 'dynamic',
-                            'value' => 'firstName',
+                            'value' => 'prefix',
                         ],
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'lastName',
-                        ],
-                        'dependsOn' => 'lastName',
-                    ],
-                ],
-            ],
-            [
-            '{firstName}{lastName|rb}',
-                [
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'firstName',
-                        ],
-                        'dependsOn' => 'firstName',
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'lastName',
-                        ]
-                    ],
-                ],
-            ],
-            [
-                '{firstName} {}*{nikname|b}* {lastName}',
-                [
-                    [
-                        'content' => [
-                            'type' => 'dynamic',
-                            'value' => 'firstName',
-                        ],
-                        'dependsOn' => 'firstName',
+                        'dependsOn' => 'prefix'
                     ],
                     [
                         'content' => [
                             'type' => 'static',
                             'value' => ' ',
                         ],
-                        'dependsOn' => 'firstName'
-                    ],
-                    [
-                        'content' => [
-                            'type' => 'static',
-                            'value' => '*',
-                        ],
-                        'dependsOn' => 'nikname'
+                        'dependsOn' => 'prefix'
                     ],
                     [
                         'content' => [
                             'type' => 'dynamic',
-                            'value' => 'nikname',
+                            'value' => 'firstname',
                         ],
-                        'dependsOn' => 'nikname',
                     ],
                     [
                         'content' => [
                             'type' => 'static',
-                            'value' => '* ',
+                            'value' => ' ',
                         ],
-                        'dependsOn' => 'nikname'
                     ],
                     [
                         'content' => [
                             'type' => 'dynamic',
-                            'value' => 'lastName',
+                            'value' => 'middlename',
                         ],
-                        'dependsOn' => 'lastName',
+                        'dependsOn' => 'middlename'
                     ],
-                ],
+                    [
+                        'content' => [
+                            'type' => 'static',
+                            'value' => ' ',
+                        ],
+                        'dependsOn' => 'middlename'
+                    ],
+                    [
+                        'content' => [
+                            'type' => 'dynamic',
+                            'value' => 'lastname',
+                        ],
+                    ],
+                    [
+                        'content' => [
+                            'type' => 'static',
+                            'value' => ' ',
+                        ],
+                        'dependsOn' => 'suffix'
+                    ],
+                    [
+                        'content' => [
+                            'type' => 'dynamic',
+                            'value' => 'suffix',
+                        ],
+                        'dependsOn' => 'suffix'
+                    ],
+                ]
             ]
         ];
     }

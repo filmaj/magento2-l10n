@@ -7,8 +7,11 @@ namespace Magento\Newsletter\Model;
 
 use Magento\Customer\Api\AccountManagementInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Exception\MailException;
 use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\PersonName\DataObjectFormatter;
+use Magento\Framework\PersonName\Formatter;
 
 /**
  * Subscriber model
@@ -128,6 +131,11 @@ class Subscriber extends \Magento\Framework\Model\AbstractModel
     protected $inlineTranslation;
 
     /**
+     * @var DataObjectFormatter
+     */
+    private $nameFormatter;
+
+    /**
      * Initialize dependencies.
      *
      * @param \Magento\Framework\Model\Context $context
@@ -144,6 +152,7 @@ class Subscriber extends \Magento\Framework\Model\AbstractModel
      * @param \Magento\Framework\Data\Collection\AbstractDb|null $resourceCollection
      * @param array $data
      * @param \Magento\Framework\Stdlib\DateTime\DateTime|null $dateTime
+     * @param DataObjectFormatter $nameFormatter
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
@@ -160,7 +169,8 @@ class Subscriber extends \Magento\Framework\Model\AbstractModel
         \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
         array $data = [],
-        \Magento\Framework\Stdlib\DateTime\DateTime $dateTime = null
+        \Magento\Framework\Stdlib\DateTime\DateTime $dateTime = null,
+        DataObjectFormatter $nameFormatter = null
     ) {
         $this->_newsletterData = $newsletterData;
         $this->_scopeConfig = $scopeConfig;
@@ -173,6 +183,7 @@ class Subscriber extends \Magento\Framework\Model\AbstractModel
         $this->customerRepository = $customerRepository;
         $this->customerAccountManagement = $customerAccountManagement;
         $this->inlineTranslation = $inlineTranslation;
+        $this->nameFormatter = $nameFormatter ?: ObjectManager::getInstance()->get(DataObjectFormatter::class);
         parent::__construct($context, $registry, $resource, $resourceCollection, $data);
     }
 
@@ -824,11 +835,8 @@ class Subscriber extends \Magento\Framework\Model\AbstractModel
      */
     public function getSubscriberFullName()
     {
-        $name = null;
-        if ($this->hasFirstname() || $this->hasLastname()) {
-            $name = $this->getFirstname() . ' ' . $this->getLastname();
-        }
-        return $name;
+        $name = $this->nameFormatter->format($this, Formatter::FORMAT_DEFAULT);
+        return $name ?: null;
     }
 
     /**

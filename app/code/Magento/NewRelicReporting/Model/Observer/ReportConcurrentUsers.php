@@ -5,8 +5,11 @@
  */
 namespace Magento\NewRelicReporting\Model\Observer;
 
+use Magento\Customer\Model\Name\FromCustomerNameDataProviderFactory;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
+use Magento\Framework\PersonName\Formatter;
 use Magento\NewRelicReporting\Model\Config;
 
 /**
@@ -45,12 +48,24 @@ class ReportConcurrentUsers implements ObserverInterface
     protected $jsonEncoder;
 
     /**
+     * @var FromCustomerNameDataProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param Config $config
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\NewRelicReporting\Model\UsersFactory $usersFactory
      * @param \Magento\Framework\Json\EncoderInterface $jsonEncoder
+     * @param FromCustomerNameDataProviderFactory $nameDataProviderFactory
+     * @param Formatter $nameFormatter
      */
     public function __construct(
         Config $config,
@@ -58,7 +73,9 @@ class ReportConcurrentUsers implements ObserverInterface
         \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\NewRelicReporting\Model\UsersFactory $usersFactory,
-        \Magento\Framework\Json\EncoderInterface $jsonEncoder
+        \Magento\Framework\Json\EncoderInterface $jsonEncoder,
+        FromCustomerNameDataProviderFactory $nameDataProviderFactory = null,
+        Formatter $nameFormatter = null
     ) {
         $this->config = $config;
         $this->customerSession = $customerSession;
@@ -66,6 +83,10 @@ class ReportConcurrentUsers implements ObserverInterface
         $this->storeManager = $storeManager;
         $this->usersFactory = $usersFactory;
         $this->jsonEncoder = $jsonEncoder;
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(FromCustomerNameDataProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -83,7 +104,10 @@ class ReportConcurrentUsers implements ObserverInterface
 
                 $jsonData = [
                     'id' => $customer->getId(),
-                    'name' => $customer->getFirstname() . ' ' . $customer->getLastname(),
+                    'name' => $this->nameFormatter->format(
+                        $this->nameDataProviderFactory->create($customer),
+                        Formatter::FORMAT_DEFAULT
+                    ),
                     'store' => $this->storeManager->getStore()->getName(),
                     'website' => $this->storeManager->getWebsite()->getName(),
                 ];

@@ -15,6 +15,8 @@ use Magento\Customer\Model\Address\AddressModelInterface;
  */
 interface RendererInterface
 {
+    const FULL_NAME_PLACEHOLDER = 'fullname';
+
     /**
      * Set format type object
      *

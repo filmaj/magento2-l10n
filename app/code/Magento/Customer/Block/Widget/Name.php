@@ -10,6 +10,8 @@ use Magento\Customer\Api\CustomerMetadataInterface;
 use Magento\Customer\Api\Data\CustomerInterface;
 use Magento\Customer\Helper\Address as AddressHelper;
 use Magento\Customer\Model\Options;
+use Magento\Framework\App\ObjectManager;
+use Magento\Framework\PersonName\NamePartsOrder;
 use Magento\Framework\View\Element\Template\Context;
 
 /**
@@ -33,12 +35,18 @@ class Name extends AbstractWidget
     protected $options;
 
     /**
+     * @var NamePartsOrder
+     */
+    private $namePartsOrder;
+
+    /**
      * @param Context $context
      * @param AddressHelper $addressHelper
      * @param CustomerMetadataInterface $customerMetadata
      * @param Options $options
      * @param AddressMetadataInterface $addressMetadata
      * @param array $data
+     * @param NamePartsOrder $namePartsOrder
      */
     public function __construct(
         Context $context,
@@ -46,12 +54,14 @@ class Name extends AbstractWidget
         CustomerMetadataInterface $customerMetadata,
         Options $options,
         AddressMetadataInterface $addressMetadata,
-        array $data = []
+        array $data = [],
+        NamePartsOrder $namePartsOrder = null
     ) {
         $this->options = $options;
         parent::__construct($context, $addressHelper, $customerMetadata, $data);
         $this->addressMetadata = $addressMetadata;
         $this->_isScopePrivate = true;
+        $this->namePartsOrder = $namePartsOrder ?: ObjectManager::getInstance()->get(NamePartsOrder::class);
     }
 
     /**
@@ -63,6 +73,11 @@ class Name extends AbstractWidget
 
         // default template location
         $this->setTemplate('widget/name.phtml');
+    }
+
+    public function getOrderedNameParts()
+    {
+        return $this->namePartsOrder->getOrderedNameParts();
     }
 
     /**

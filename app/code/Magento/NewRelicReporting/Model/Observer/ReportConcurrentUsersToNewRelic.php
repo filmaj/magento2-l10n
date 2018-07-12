@@ -5,8 +5,11 @@
  */
 namespace Magento\NewRelicReporting\Model\Observer;
 
+use Magento\Customer\Model\Name\FromCustomerNameDataProviderFactory;
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
+use Magento\Framework\PersonName\Formatter;
 use Magento\NewRelicReporting\Model\Config;
 use Magento\NewRelicReporting\Model\NewRelicWrapper;
 
@@ -41,24 +44,42 @@ class ReportConcurrentUsersToNewRelic implements ObserverInterface
     protected $newRelicWrapper;
 
     /**
+     * @var FromCustomerNameDataProviderFactory
+     */
+    private $nameDataProviderFactory;
+
+    /**
+     * @var Formatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param Config $config
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param NewRelicWrapper $newRelicWrapper
+     * @param FromCustomerNameDataProviderFactory $nameDataProviderFactory
+     * @param Formatter $nameFormatter
      */
     public function __construct(
         Config $config,
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
-        NewRelicWrapper $newRelicWrapper
+        NewRelicWrapper $newRelicWrapper,
+        FromCustomerNameDataProviderFactory $nameDataProviderFactory = null,
+        Formatter $nameFormatter = null
     ) {
         $this->config = $config;
         $this->customerSession = $customerSession;
         $this->customerRepository = $customerRepository;
         $this->storeManager = $storeManager;
         $this->newRelicWrapper = $newRelicWrapper;
+        $this->nameDataProviderFactory = $nameDataProviderFactory
+            ?: ObjectManager::getInstance()->get(FromCustomerNameDataProviderFactory::class);
+        $this->nameFormatter = $nameFormatter
+            ?: ObjectManager::getInstance()->get(Formatter::class);
     }
 
     /**
@@ -79,7 +100,10 @@ class ReportConcurrentUsersToNewRelic implements ObserverInterface
                 $this->newRelicWrapper->addCustomParameter(Config::CUSTOMER_ID, $customer->getId());
                 $this->newRelicWrapper->addCustomParameter(
                     Config::CUSTOMER_NAME,
-                    $customer->getFirstname() . ' ' . $customer->getLastname()
+                    $this->nameFormatter->format(
+                        $this->nameDataProviderFactory->create($customer),
+                        Formatter::FORMAT_DEFAULT
+                    )
                 );
             }
         }

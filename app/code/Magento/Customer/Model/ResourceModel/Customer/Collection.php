@@ -135,9 +135,7 @@ class Collection extends \Magento\Eav\Model\Entity\Collection\VersionControl\Abs
         }
 
         $mappedFields = [
-            FormatInterface::PART_FIRST_NAME => '{{firstname}}',
             FormatInterface::PART_GIVEN_NAME => '{{firstname}}',
-            FormatInterface::PART_LAST_NAME => '{{lastname}}',
             FormatInterface::PART_FAMILY_NAME => '{{lastname}}',
         ];
         if (isset($fields['prefix'])) {

@@ -7,146 +7,128 @@ declare(strict_types=1);
 
 namespace Magento\Framework\PersonName;
 
-use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Filter\Template;
 
-class FormatParser {
-
-    const TYPE_NAME_PART = 'namePart';
-
-    const TYPE_DELIMITER = 'delimiter';
-
-    const MODIFIER_REQUIRED = 'r';
-
-    const MODIFIER_BIND_PRECEDING_DELIMITER = 'b';
-
+class FormatParser
+{
     public function parse(FormatInterface $format)
     {
         $template = $format->getTemplate();
-        $parsed = [];
 
-        $unprocessedPart = $template;
-        while (!empty($unprocessedPart)) {
-            list (
-                $delimiter,
-                $namePart,
-                $unprocessedPart
-            ) = $this->processNextPart($unprocessedPart);
-            list($namePart, $options) = $this->parseNamePart($namePart);
+        $dependentParts = $this->splitOnDependentParts($template);
+        $parsedParts = $this->parseParts($dependentParts);
 
-            if ($delimiter !== '') {
-                $node = [
-                    'content' => [
-                        'type' => 'static',
-                        'value' => $delimiter,
-                    ]
-                ];
-                if ($options['isPrecedingDelimiterBound']) {
-                    if ($options['isOptional']) {
-                        $node['dependsOn'] =  $namePart;
-                    }
-                } elseif (count($parsed) && isset($parsed[count($parsed) - 1]['dependsOn'])) {
-                    $node['dependsOn'] = $parsed[count($parsed) - 1]['dependsOn'];
-                };
-                $parsed[] = $node;
-            }
-            if ($namePart !== '') {
-                $node = [
-                    'content' => [
-                        'type' => 'dynamic',
-                        'value' => $namePart,
-                    ]
-                ];
-                if ($options['isOptional']) {
-                    $node['dependsOn'] = $namePart;
-                }
-                $parsed[] = $node;
-            }
-        }
-
-        return $parsed;
+        return $parsedParts;
     }
 
-    private function processNextPart(string $subject)
+    private function splitOnDependentParts(string $template): array
     {
-        $namePartPosition = $this->findPositionsOfSequentialOpenAndCloseTags($subject);
-        if ($namePartPosition === false) {
-            $delimiter = $subject;
-            $namePart = '';
-            $unprocessedPart = '';
-        } else {
-            list($namePartBegin, $namePartEnd) = $namePartPosition;
-            $delimiter = substr($subject, 0, $namePartBegin);
-            $namePart = substr($subject, $namePartBegin + 1, $namePartEnd - $namePartBegin - 1);
-            $unprocessedPart = substr($subject, min($namePartEnd + 1, strlen($subject)));
-        }
-
-        return [
-            $delimiter,
-            $namePart,
-            $unprocessedPart
-        ];
-    }
-
-    private function findPositionsOfSequentialOpenAndCloseTags(string $subject) {
-        $openTag = '{';
-        $closeTag = '}';
-
-        $positionOfFirstOpenTag = strpos($subject, $openTag);
-        if ($positionOfFirstOpenTag === false) {
-            return false;
-        }
-        $positionOfCloseTagAfterOpenTag = strpos($subject, $closeTag, $positionOfFirstOpenTag);
-        if ($positionOfCloseTagAfterOpenTag === false) {
-            return false;
-        }
-        // we can be sure that position exists
-        $positionOfOpenTagBeforeCloseTag = strrpos(
-            $subject,
-            $openTag,
-            -(strlen($subject) - $positionOfCloseTagAfterOpenTag)
+        $parts = [];
+        preg_match_all(
+            Template::CONSTRUCTION_DEPEND_PATTERN,
+            $template,
+            $dependMatches,
+            PREG_OFFSET_CAPTURE | PREG_SET_ORDER
         );
-        return [
-            $positionOfOpenTagBeforeCloseTag,
-            $positionOfCloseTagAfterOpenTag
-        ];
-    }
 
-    private function parseNamePart(string $namePart): array
-    {
-        $parsed = explode('|', $namePart, 2);
-        $namePartType = $parsed[0];
-        $namePartOptions = $this->parseNamePartOptions(isset($parsed[1]) ? $parsed[1] : '');
-        return [
-            $namePartType,
-            $namePartOptions
-        ];
-    }
+        $currentPosition = 0;
+        foreach ($dependMatches as $dependingPart) {
+            $dependingTemplate = $dependingPart[0][0];
+            $dependingPartBeginPosition = $dependingPart[0][1];
+            $dependsOn = $dependingPart[1][0];
+            $dependingContent = $dependingPart[2][0];
 
-    private function parseNamePartOptions(string $appliedModifiers)
-    {
-        $options = [
-            'isOptional' => true,
-            'isPrecedingDelimiterBound' => false,
-        ];
-
-        $modifiers = [
-            self::MODIFIER_REQUIRED => [
-                'isOptional' => false,
-            ],
-            self::MODIFIER_BIND_PRECEDING_DELIMITER => [
-                'isPrecedingDelimiterBound' => true,
-            ],
-        ];
-
-        foreach (array_filter(str_split($appliedModifiers)) as $modifier) {
-            if (!isset($modifiers[$modifier])) {
-                throw new LocalizedException(
-                    __('Unknown name format modifier "%1".', $modifier)
-                );
+            if ($currentPosition !== $dependingPartBeginPosition) {
+                $parts[] = [
+                    'template' => substr(
+                        $template,
+                        $currentPosition,
+                        $dependingPartBeginPosition - $currentPosition
+                    ),
+                ];
             }
-            $options = array_merge($options, $modifiers[$modifier]);
+
+            $parts[] = [
+                'template' => $dependingContent,
+                'dependsOn' => $dependsOn,
+            ];
+
+            $currentPosition = $dependingPartBeginPosition + strlen($dependingTemplate);
         }
 
-        return $options;
+        if ($currentPosition < strlen($template)) {
+            $parts[] = [
+                'template' => substr(
+                    $template,
+                    $currentPosition
+                ),
+            ];
+        }
+
+        return $parts;
+    }
+
+    private function parseParts(array $templateParts): array
+    {
+        $parsedParts = [];
+        foreach ($templateParts as $templatePart) {
+            $parsedPartsFromTemplate = $this->parsePart($templatePart['template']);
+            foreach ($parsedPartsFromTemplate as $part) {
+                $parsedPart = [
+                    'content' => $part,
+                ];
+                if (isset($templatePart['dependsOn'])) {
+                    $parsedPart['dependsOn'] = $templatePart['dependsOn'];
+                }
+                $parsedParts[] = $parsedPart;
+            }
+        }
+        return $parsedParts;
+    }
+
+    private function parsePart(string $template)
+    {
+        $parts = [];
+
+        preg_match_all(
+            '/{{var\s*(.*?)}}/si',
+            $template,
+            $matches,
+            PREG_OFFSET_CAPTURE | PREG_SET_ORDER
+        );
+
+        $currentPosition = 0;
+        foreach ($matches as $dynamicPart) {
+            $dynamicPartPlaceholder = $dynamicPart[0][0];
+            $dynamicPartBeginPosition = $dynamicPart[0][1];
+            $dynamicPartSource = $dynamicPart[1][0];
+
+            if ($currentPosition !== $dynamicPartBeginPosition) {
+                $parts[] = [
+                    'type' => 'static',
+                    'value' => substr(
+                        $template,
+                        $currentPosition,
+                        $dynamicPartBeginPosition - $currentPosition
+                    ),
+                ];
+            }
+
+            $parts[] = [
+                'type' => 'dynamic',
+                'value' => $dynamicPartSource,
+            ];
+
+            $currentPosition = $dynamicPartBeginPosition + strlen($dynamicPartPlaceholder);
+        }
+
+        if ($currentPosition < strlen($template)) {
+            $parts[] = [
+                'type' => 'static',
+                'value' => substr($template, $currentPosition),
+            ];
+        }
+
+        return $parts;
     }
 }

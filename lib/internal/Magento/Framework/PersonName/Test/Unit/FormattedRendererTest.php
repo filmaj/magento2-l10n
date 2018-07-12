@@ -27,16 +27,7 @@ class FormattedRendererTest extends TestCase
         $parser = new FormatParser();
         $renderer = new FormattedRenderer($format, $parser);
 
-        $dataProvider = new AliasedDataProvider(
-            new ArrayProvider($this->createPersonDataObject()),
-            [
-                'firstName' => 'firstname',
-                'givenName' => 'firstname',
-                'lastName' => 'lastname',
-                'familyName' => 'lastname',
-                'middleName' => 'middlename',
-            ]
-        );
+        $dataProvider = new ArrayProvider($this->createPersonDataObject());
 
         $actualResult = $renderer->render($dataProvider);
         $this->assertEquals($expectedResult, $actualResult);
@@ -45,38 +36,32 @@ class FormattedRendererTest extends TestCase
 
     private function createPersonDataObject()
     {
-        return new DataObject([
+        return [
             'firstname' => 'John',
             'lastname' => 'Doe',
             'middlename' => 'P.',
             'prefix'=> 'Mr.',
             'suffix' => 'Jr.',
-        ]);
+        ];
     }
 
     public function variations()
     {
         return [
             [
-                '{firstName} {lastName}',
+                '{{var firstname}}{{depend lastname}} {{var lastname}}{{/depend}}',
                 'John Doe'
             ],
             [
-                '{givenName} {familyName}',
-                'John Doe'
-            ],
-            [
-                '{lastName}, {firstName}',
+                '{{var lastname}}{{depend firstname}}, {{var firstname}}{{/depend}}',
                 'Doe, John'
             ],
             [
-                '{prefix} {givenName} {middleName} {lastName} {suffix}',
+                '{{depend prefix}}{{var prefix}} {{/depend}}{{var firstname}} ' .
+                '{{depend middlename}}{{var middlename}} {{/depend}}{{var lastname}}' .
+                '{{depend suffix}} {{var suffix}}{{/depend}}',
                 'Mr. John P. Doe Jr.'
             ],
-            [
-                '{givenName} {}*{nikname|b}* {familyName}',
-                'John Doe'
-            ]
         ];
     }
 }

@@ -8,20 +8,6 @@
 
 /** @var \Magento\Customer\Block\Widget\Name $block */
 
-/*
-<?= $block->getLayout()->createBlock('Magento\Customer\Block\Widget\Name')
-   ->setObject($block->getAddress())
-   ->toHtml() ?>
-
-For checkout/onepage/shipping.phtml:
-
-<?= $block->getLayout()->createBlock('Magento\Customer\Block\Widget\Name')
-   ->setObject($block->getAddress())
-   ->setFieldIdFormat('shipping:%s')
-   ->setFieldNameFormat('shipping[%s]')
-   ->toHtml() ?>
-*/
-
 $prefix = $block->showPrefix();
 $middle = $block->showMiddlename();
 $suffix = $block->showSuffix();
@@ -33,8 +19,8 @@ $suffix = $block->showSuffix();
         <fieldset class="fieldset fieldset-fullname">
         <div class="fields">
 <?php endif; ?>
-
-    <?php if ($prefix): ?>
+    <?php foreach ($block->getOrderedNameParts() as $namePart): ?>
+    <?php if ($namePart === 'prefix' && $prefix): ?>
         <div class="field field-name-prefix<?php if ($block->isPrefixRequired()) echo ' required' ?>">
             <label class="label" for="<?= $block->escapeHtmlAttr($block->getFieldId('prefix')) ?>"><span><?= $block->escapeHtml($block->getStoreLabel('prefix')) ?></span></label>
             <div class="control">
@@ -59,6 +45,7 @@ $suffix = $block->showSuffix();
             </div>
         </div>
     <?php endif; ?>
+    <?php if ($namePart === 'firstname'): ?>
         <div class="field field-name-firstname required">
             <label class="label" for="<?= $block->escapeHtmlAttr($block->getFieldId('firstname')) ?>"><span><?= $block->escapeHtml($block->getStoreLabel('firstname')) ?></span></label>
             <div class="control">
@@ -69,7 +56,8 @@ $suffix = $block->showSuffix();
                        class="input-text <?= $block->escapeHtmlAttr($block->getAttributeValidationClass('firstname')) ?>" <?php if ($block->getAttributeValidationClass('firstname') == 'required-entry') echo ' data-validate="{required:true}"' ?>>
             </div>
         </div>
-    <?php if ($middle): ?>
+    <?php endif; ?>
+    <?php if ($namePart === 'middlename' && $middle): ?>
         <?php $isMiddlenameRequired = $block->isMiddlenameRequired(); ?>
         <div class="field field-name-middlename<?= $isMiddlenameRequired ? ' required' : '' ?>">
             <label class="label" for="<?= $block->escapeHtmlAttr($block->getFieldId('middlename')) ?>"><span><?= $block->escapeHtml($block->getStoreLabel('middlename')) ?></span></label>
@@ -82,6 +70,7 @@ $suffix = $block->showSuffix();
             </div>
         </div>
     <?php endif; ?>
+    <?php if ($namePart === 'lastname'): ?>
         <div class="field field-name-lastname required">
             <label class="label" for="<?= $block->escapeHtmlAttr($block->getFieldId('lastname')) ?>"><span><?= $block->escapeHtml($block->getStoreLabel('lastname')) ?></span></label>
             <div class="control">
@@ -92,7 +81,8 @@ $suffix = $block->showSuffix();
                        class="input-text <?= $block->escapeHtmlAttr($block->getAttributeValidationClass('lastname')) ?>" <?php if ($block->getAttributeValidationClass('lastname') == 'required-entry') echo ' data-validate="{required:true}"' ?>>
             </div>
         </div>
-    <?php if ($suffix): ?>
+    <?php endif; ?>
+    <?php if ($namePart === 'suffix' && $suffix): ?>
         <div class="field field-name-suffix<?php if ($block->isSuffixRequired()) echo ' required' ?>">
             <label class="label" for="<?= $block->escapeHtmlAttr($block->getFieldId('suffix')) ?>"><span><?= $block->escapeHtml($block->getStoreLabel('suffix')) ?></span></label>
             <div class="control">
@@ -117,7 +107,7 @@ $suffix = $block->showSuffix();
             </div>
         </div>
     <?php endif; ?>
-
+    <?php endforeach; ?>
     <?php if (($prefix || $middle || $suffix) && !$block->getNoWrap()): ?>
             </div>
         </fieldset>

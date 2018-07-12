@@ -6,8 +6,11 @@
 
 namespace Magento\Shipping\Model\Shipping;
 
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\DataObject;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\PersonName\DataObjectFormatter;
+use Magento\Framework\PersonName\Formatter;
 use Magento\Sales\Model\Order\Shipment;
 use Magento\Sales\Model\Order\Address;
 use Magento\Shipping\Model\Shipment\Request;
@@ -31,6 +34,11 @@ class Labels extends \Magento\Shipping\Model\Shipping
     protected $_request;
 
     /**
+     * @var DataObjectFormatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Shipping\Model\Config $shippingConfig
      * @param \Magento\Store\Model\StoreManagerInterface $storeManager
@@ -42,6 +50,7 @@ class Labels extends \Magento\Shipping\Model\Shipping
      * @param \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry
      * @param \Magento\Backend\Model\Auth\Session $authSession
      * @param \Magento\Shipping\Model\Shipment\Request $request
+     * @param DataObjectFormatter $nameFormatter
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
@@ -55,7 +64,8 @@ class Labels extends \Magento\Shipping\Model\Shipping
         \Magento\Framework\Math\Division $mathDivision,
         \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry,
         \Magento\Backend\Model\Auth\Session $authSession,
-        Request $request
+        Request $request,
+        DataObjectFormatter $nameFormatter = null
     ) {
         $this->_authSession = $authSession;
         $this->_request = $request;
@@ -70,6 +80,7 @@ class Labels extends \Magento\Shipping\Model\Shipping
             $mathDivision,
             $stockRegistry
         );
+        $this->nameFormatter = $nameFormatter ?: ObjectManager::getInstance()->get(DataObjectFormatter::class);
     }
 
     /**
@@ -228,13 +239,17 @@ class Labels extends \Magento\Shipping\Model\Shipping
      */
     protected function setRecipientDetails(Request $request, Address $address)
     {
-        $request->setRecipientContactPersonName(trim($address->getFirstname() . ' ' . $address->getLastname()));
+        $request->setRecipientContactPersonName(
+            $this->nameFormatter->format($address, Formatter::FORMAT_DEFAULT)
+        );
         $request->setRecipientContactPersonFirstName($address->getFirstname());
         $request->setRecipientContactPersonLastName($address->getLastname());
         $request->setRecipientContactCompanyName($address->getCompany());
         $request->setRecipientContactPhoneNumber($address->getTelephone());
         $request->setRecipientEmail($address->getEmail());
-        $request->setRecipientAddressStreet(trim($address->getStreetLine(1) . ' ' . $address->getStreetLine(2)));
+        $request->setRecipientAddressStreet(
+            trim($address->getStreetLine(1) . ' ' . $address->getStreetLine(2))
+        );
         $request->setRecipientAddressStreet1($address->getStreetLine(1));
         $request->setRecipientAddressStreet2($address->getStreetLine(2));
         $request->setRecipientAddressCity($address->getCity());

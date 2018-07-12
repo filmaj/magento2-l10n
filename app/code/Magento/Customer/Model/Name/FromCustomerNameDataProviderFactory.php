@@ -53,9 +53,9 @@ class FromCustomerNameDataProviderFactory
     {
         $data = [
             FormatInterface::PART_NAME_PREFIX => $customer->getPrefix(),
-            FormatInterface::PART_FIRST_NAME => $customer->getFirstname(),
+            FormatInterface::PART_GIVEN_NAME => $customer->getFirstname(),
             FormatInterface::PART_MIDDLE_NAME => $customer->getMiddlename(),
-            FormatInterface::PART_LAST_NAME => $customer->getLastname(),
+            FormatInterface::PART_FAMILY_NAME => $customer->getLastname(),
             FormatInterface::PART_NAME_SUFFIX => $customer->getSuffix(),
         ];
         return $data;
@@ -64,8 +64,8 @@ class FromCustomerNameDataProviderFactory
     private function getAccessibleDataList()
     {
         $accessibleData = [
-            FormatInterface::PART_FIRST_NAME,
-            FormatInterface::PART_LAST_NAME,
+            FormatInterface::PART_GIVEN_NAME,
+            FormatInterface::PART_FAMILY_NAME,
         ];
         if ($this->isOptionalPartVisible(CustomerInterface::PREFIX)) {
             $accessibleData[] = FormatInterface::PART_NAME_PREFIX;

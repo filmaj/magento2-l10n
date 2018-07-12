@@ -5,8 +5,11 @@
  */
 namespace Magento\NewRelicReporting\Model\Observer;
 
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
+use Magento\Framework\PersonName\DataObjectFormatter;
+use Magento\Framework\PersonName\Formatter;
 use Magento\NewRelicReporting\Model\Config;
 
 /**
@@ -35,21 +38,29 @@ class ReportConcurrentAdmins implements ObserverInterface
     protected $jsonEncoder;
 
     /**
+     * @var DataObjectFormatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param Config $config
      * @param \Magento\Backend\Model\Auth\Session $backendAuthSession
      * @param \Magento\NewRelicReporting\Model\UsersFactory $usersFactory
      * @param \Magento\Framework\Json\EncoderInterface $jsonEncoder
+     * @param DataObjectFormatter $nameFormatter
      */
     public function __construct(
         Config $config,
         \Magento\Backend\Model\Auth\Session $backendAuthSession,
         \Magento\NewRelicReporting\Model\UsersFactory $usersFactory,
-        \Magento\Framework\Json\EncoderInterface $jsonEncoder
+        \Magento\Framework\Json\EncoderInterface $jsonEncoder,
+        DataObjectFormatter $nameFormatter = null
     ) {
         $this->config = $config;
         $this->backendAuthSession = $backendAuthSession;
         $this->usersFactory = $usersFactory;
         $this->jsonEncoder = $jsonEncoder;
+        $this->nameFormatter = $nameFormatter ?: ObjectManager::getInstance()->get(DataObjectFormatter::class);
     }
 
     /**
@@ -67,7 +78,7 @@ class ReportConcurrentAdmins implements ObserverInterface
                 $jsonData = [
                     'id' => $user->getId(),
                     'username' => $user->getUserName(),
-                    'name' => $user->getFirstName() . ' ' . $user->getLastName(),
+                    'name' => $this->nameFormatter->format($user, Formatter::FORMAT_DEFAULT),
                 ];
 
                 $modelData = [

@@ -436,4 +436,14 @@
     <preference
             for="Magento\Customer\Api\AccountDelegationInterface"
             type="Magento\Customer\Model\Delegation\AccountDelegation" />
+    <virtualType name="Magento\Customer\Model\Name\NamePartsOrder" type="Magento\Framework\PersonName\NamePartsOrder">
+        <arguments>
+            <argument name="format" xsi:type="object">Magento\Framework\PersonName\LongFormat</argument>
+        </arguments>
+    </virtualType>
+    <type name="Magento\Customer\Block\Widget\Name">
+        <arguments>
+            <argument name="namePartsOrder" xsi:type="object">Magento\Customer\Model\Name\NamePartsOrder</argument>
+        </arguments>
+    </type>
 </config>

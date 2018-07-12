@@ -15,15 +15,11 @@ namespace Magento\Framework\PersonName;
  */
 interface FormatInterface
 {
-    const PART_FIRST_NAME = 'firstName';
+    const PART_GIVEN_NAME = 'firstname';
 
-    const PART_GIVEN_NAME = 'givenName';
+    const PART_FAMILY_NAME = 'lastname';
 
-    const PART_LAST_NAME = 'lastName';
-
-    const PART_FAMILY_NAME = 'familyName';
-
-    const PART_MIDDLE_NAME = 'middleName';
+    const PART_MIDDLE_NAME = 'middlename';
 
     const PART_NAME_PREFIX = 'prefix';
 

@@ -53,9 +53,9 @@ class FromAddressNameDataProviderFactory
     {
         $data = [
             FormatInterface::PART_NAME_PREFIX => $address->getPrefix(),
-            FormatInterface::PART_FIRST_NAME => $address->getFirstname(),
+            FormatInterface::PART_GIVEN_NAME => $address->getFirstname(),
             FormatInterface::PART_MIDDLE_NAME => $address->getMiddlename(),
-            FormatInterface::PART_LAST_NAME => $address->getLastname(),
+            FormatInterface::PART_FAMILY_NAME => $address->getLastname(),
             FormatInterface::PART_NAME_SUFFIX => $address->getSuffix(),
         ];
         return $data;
@@ -64,8 +64,8 @@ class FromAddressNameDataProviderFactory
     private function getAccessibleDataList()
     {
         $accessibleData = [
-            FormatInterface::PART_FIRST_NAME,
-            FormatInterface::PART_LAST_NAME,
+            FormatInterface::PART_GIVEN_NAME,
+            FormatInterface::PART_FAMILY_NAME,
         ];
         if ($this->isOptionalPartVisible(AddressInterface::PREFIX)) {
             $accessibleData[] = FormatInterface::PART_NAME_PREFIX;

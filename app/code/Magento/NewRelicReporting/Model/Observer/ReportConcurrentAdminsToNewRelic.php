@@ -5,8 +5,10 @@
  */
 namespace Magento\NewRelicReporting\Model\Observer;
 
+use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
+use Magento\Framework\PersonName\DataObjectFormatter;
 use Magento\NewRelicReporting\Model\Config;
 use Magento\NewRelicReporting\Model\NewRelicWrapper;
 
@@ -31,18 +33,26 @@ class ReportConcurrentAdminsToNewRelic implements ObserverInterface
     protected $newRelicWrapper;
 
     /**
+     * @var DataObjectFormatter
+     */
+    private $nameFormatter;
+
+    /**
      * @param Config $config
      * @param \Magento\Backend\Model\Auth\Session $backendAuthSession
      * @param NewRelicWrapper $newRelicWrapper
+     * @param DataObjectFormatter $nameFormatter
      */
     public function __construct(
         Config $config,
         \Magento\Backend\Model\Auth\Session $backendAuthSession,
-        NewRelicWrapper $newRelicWrapper
+        NewRelicWrapper $newRelicWrapper,
+        DataObjectFormatter $nameFormatter = null
     ) {
         $this->config = $config;
         $this->backendAuthSession = $backendAuthSession;
         $this->newRelicWrapper = $newRelicWrapper;
+        $this->nameFormatter = $nameFormatter ?: ObjectManager::getInstance()->get(DataObjectFormatter::class);
     }
 
     /**
@@ -61,7 +71,7 @@ class ReportConcurrentAdminsToNewRelic implements ObserverInterface
                 $this->newRelicWrapper->addCustomParameter(Config::ADMIN_USER, $user->getUserName());
                 $this->newRelicWrapper->addCustomParameter(
                     Config::ADMIN_NAME,
-                    $user->getFirstName() . ' ' . $user->getLastName()
+                    $this->nameFormatter->format($user, Formatter::FORMAT_DEFAULT)
                 );
             }
         }

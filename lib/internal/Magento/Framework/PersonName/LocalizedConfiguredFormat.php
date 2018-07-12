@@ -16,8 +16,12 @@ class LocalizedConfiguredFormat implements FormatInterface
     const TYPE_LONG = 'long';
 
     private const DEFAULTS = [
-        self::TYPE_DEFAULT => '{firstName} {lastName}',
-        self::TYPE_LONG => '{prefix} {firstName} {middleName} {lastName} {suffix}',
+        self::TYPE_DEFAULT => '{{var firstname}}{{depend lastname}} {{var lastname}}{{/depend}}',
+        self::TYPE_LONG => '{{depend prefix}}{{var prefix}} {{/depend}}' .
+            '{{var firstname}} ' .
+            '{{depend middlename}}{{var middlename}} {{/depend}}' .
+            '{{var lastname}}' .
+            '{{depend suffix}} {{var suffix}}{{/depend}}',
     ];
 
     /**
